@@ -11,15 +11,15 @@ Inference pipeline (per uploaded image):
     5. Scale the concatenated vector with the fitted StandardScaler.
     6. Produce a 3-D UMAP embedding for the visualisation layer.
     7. Pass the scaled full-dimensional feature vector to the LightGBM agent
-       (new_model/agent_deep_verified.txt) for Mayo Score prediction.
+       (model-colono/models-trained_feedback_agent_lightgbm_multimodal.pkl) for Mayo Score prediction.
     8. Return prediction, confidence scores, texture metrics, and UMAP
        coordinates as a JSON response.
 
 Environment variables (optional overrides):
-    MODEL_PATH   – path to best_model.h5
-    SCALER_PATH  – path to scaler_final.pkl
-    UMAP_PATH    – path to umap_final.pkl
-    AGENT_PATH   – path to agent_deep_verified.txt
+    MODEL_PATH   – path to models-TryFindingBestModel.h5
+    SCALER_PATH  – path to models-scaler_agent.pkl
+    UMAP_PATH    – path to models-umap_model_mixed.pkl
+    AGENT_PATH   – path to models-trained_feedback_agent_lightgbm_multimodal.pkl
 
 Dependencies:
     flask>=2.3
@@ -62,10 +62,10 @@ from app.texture_extractor import (  # noqa: E402
 # Default artefact paths (overridable via environment variables)
 # ---------------------------------------------------------------------------
 
-DEFAULT_MODEL_PATH  = PROJECT_ROOT / "new_model" / "best_model.h5"
-DEFAULT_SCALER_PATH = PROJECT_ROOT / "new_model" / "scaler_final.pkl"
-DEFAULT_UMAP_PATH   = PROJECT_ROOT / "new_model" / "umap_final.pkl"
-DEFAULT_AGENT_PATH  = PROJECT_ROOT / "new_model" / "agent_deep_verified.txt"
+DEFAULT_MODEL_PATH  = PROJECT_ROOT / "model-colono" / "models-TryFindingBestModel.h5"
+DEFAULT_SCALER_PATH = PROJECT_ROOT / "model-colono" / "models-scaler_agent.pkl"
+DEFAULT_UMAP_PATH   = PROJECT_ROOT / "model-colono" / "models-umap_model_mixed.pkl"
+DEFAULT_AGENT_PATH  = PROJECT_ROOT / "model-colono" / "models-trained_feedback_agent_lightgbm_multimodal.pkl"
 
 MODEL_PATH  = Path(os.environ.get("MODEL_PATH",  str(DEFAULT_MODEL_PATH)))
 SCALER_PATH = Path(os.environ.get("SCALER_PATH", str(DEFAULT_SCALER_PATH)))
@@ -164,20 +164,16 @@ def _get_umap():
 @lru_cache(maxsize=1)
 def _get_lgb_agent():
     """
-    Load and return the LightGBM booster from the text-format agent file.
-
-    The agent file (agent_deep_verified.txt) contains the serialised LightGBM
-    model in the native LightGBM text format. It is loaded via
-    lightgbm.Booster(model_file=...).
+    Load and return the LightGBM model from pickle.
 
     Returns
     -------
-    lightgbm.Booster
+    Model object (typically LGBMClassifier)
     """
-    import lightgbm as lgb  # noqa: PLC0415
+    import joblib  # noqa: PLC0415
 
     current_app.logger.info(f"Loading LightGBM agent from: {AGENT_PATH}")
-    booster = lgb.Booster(model_file=str(AGENT_PATH))
+    booster = joblib.load(str(AGENT_PATH))
     return booster
 
 
@@ -292,7 +288,11 @@ def _run_inference(rgb_image: np.ndarray) -> dict:
     # (UMAP is a visualisation tool; the GBM operates in the full feature space.)
     # ------------------------------------------------------------------
     booster    = _get_lgb_agent()
-    raw_preds  = booster.predict(scaled_combined)                  # (1, n_classes)
+    # Handle both scikit-learn API (predict_proba) and native Booster (predict)
+    if hasattr(booster, "predict_proba"):
+        raw_preds = booster.predict_proba(scaled_combined)
+    else:
+        raw_preds = booster.predict(scaled_combined)
     probs      = raw_preds[0].tolist()                             # [p0, p1, p2, p3]
     predicted_class = int(np.argmax(probs))
     confidence      = float(np.max(probs))

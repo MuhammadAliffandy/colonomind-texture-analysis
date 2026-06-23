@@ -66,9 +66,9 @@ from app.texture_extractor import extract_glcm_dwt, N_TEXTURE_FEATURES
 # Configuration defaults
 # ---------------------------------------------------------------------------
 
-MODEL_PATH   = SCRIPT_DIR / "new_model" / "best_model.h5"
-SCALER_PATH  = SCRIPT_DIR / "new_model" / "scaler_final.pkl"
-UMAP_PATH    = SCRIPT_DIR / "new_model" / "umap_final.pkl"
+MODEL_PATH   = SCRIPT_DIR / "model-colono" / "models-TryFindingBestModel.h5"
+SCALER_PATH  = SCRIPT_DIR / "model-colono" / "models-scaler_agent.pkl"
+UMAP_PATH    = SCRIPT_DIR / "model-colono" / "models-umap_model_mixed.pkl"
 
 # Target image size fed to the Keras backbone (must match training resolution)
 TARGET_IMAGE_SIZE = (224, 224)
@@ -368,7 +368,7 @@ def run_refit_pipeline(
         pickle.dump(umap_reducer, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     # Optionally save the extracted features and labels for downstream use
-    features_cache_path = SCRIPT_DIR / "new_model" / "cached_features.npz"
+    features_cache_path = SCRIPT_DIR / "model-colono" / "cached_features.npz"
     np.savez_compressed(
         features_cache_path,
         features=all_features,

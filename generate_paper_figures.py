@@ -4,7 +4,7 @@ generate_paper_figures.py
 Publication-quality figure generation for the Colonomind texture analysis paper.
 
 This script loads the pre-computed feature cache produced by dgx_refit_pipeline.py
-(new_model/cached_features.npz) and generates:
+(model-colono/cached_features.npz) and generates:
 
   Figure 1 — Multi-panel scatter plots (Mayo Score vs. individual texture metrics)
              with per-class colour coding and OLS regression lines.
@@ -15,13 +15,13 @@ Statistical analyses:
   - One-Way ANCOVA: each texture metric as covariate, Mayo Score as factor.
   - Results are printed as a formatted LaTeX-compatible table and saved as CSV.
 
-Outputs (written to new_model/figures/):
+Outputs (written to model-colono/figures/):
   texture_scatter_panel.png  (300 DPI)
   umap_3d_projection.png     (300 DPI)
   stats_summary.csv
 
 Usage:
-    python generate_paper_figures.py [--cache_path new_model/cached_features.npz]
+    python generate_paper_figures.py [--cache_path model-colono/cached_features.npz]
 
 Dependencies:
     numpy>=1.23
@@ -56,8 +56,8 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-CACHE_PATH   = SCRIPT_DIR / "new_model" / "cached_features.npz"
-OUTPUT_DIR   = SCRIPT_DIR / "new_model" / "figures"
+CACHE_PATH   = SCRIPT_DIR / "model-colono" / "cached_features.npz"
+OUTPUT_DIR   = SCRIPT_DIR / "model-colono" / "figures"
 
 # ---------------------------------------------------------------------------
 # Design constants — minimalist, publication-ready colour scheme
