@@ -14,4 +14,5 @@ dependencies:
     - PyWavelets
     - umap-learn
     - tensorflow
+    - tf-keras
     - flask-cors
