@@ -45,6 +45,10 @@ Dependencies (install into the DGX environment):
 
 import argparse
 import os
+
+# Fix for "Unknown layer: SlicingOpLambda" when loading Keras 2 .h5 models in TF 2.16+ (Keras 3)
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
 import pickle
 import sys
 from pathlib import Path
