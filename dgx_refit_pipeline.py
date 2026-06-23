@@ -172,15 +172,22 @@ def _collect_limuc_paths(limuc_root: Path):
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
     image_paths, labels = [], []
     valid_classes = {"0", "1", "2", "3"}
+    found_parent_names = set()
 
     for ext in image_extensions:
         # Recursively search for all images in any subfolder
         for img_path in limuc_root.rglob(f"*{ext}"):
-            # The parent folder name determines the Mayo score
             parent_name = img_path.parent.name
+            found_parent_names.add(parent_name)
+            
+            # The parent folder name determines the Mayo score
             if parent_name in valid_classes:
                 image_paths.append(img_path)
                 labels.append(int(parent_name))
+                
+    if not image_paths and found_parent_names:
+        print(f"\n[DEBUG] We found images, but their parent folders are named differently.")
+        print(f"[DEBUG] Here are some of the folder names we found: {list(found_parent_names)[:20]}\n")
 
     print(
         f"[INFO] Collected {len(image_paths)} images across "
