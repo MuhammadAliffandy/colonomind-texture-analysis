@@ -17,12 +17,12 @@ N_TEXTURE_FEATURES = 20
 def _smart_preprocess(img):
     if img is None: return None
     h, w = img.shape[:2]
-    # Crop if the image is large enough, then resize to 256x256
+    # Crop if the image is large enough, then resize to 224x224 (model input size)
     if h > 450 and w > 550: 
         crop = img[30:430, 200:550]
         if crop.size == 0: crop = img
     else: crop = img
-    return cv2.resize(crop, (256, 256))
+    return cv2.resize(crop, (224, 224))
 
 def extract_handcrafted(img):
     """
