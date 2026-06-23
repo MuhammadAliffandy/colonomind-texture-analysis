@@ -139,13 +139,13 @@ def predict():
         scaled_feats = scaler.transform(np.array(raw_feats).reshape(1, -1))
         umap_feats = umap_model.transform(scaled_feats)
         
-        # 3. Keras Multimodal Inference
+        # 3. Keras Inference
         keras_model = get_keras_model()
         extractor = get_feature_extractor()
         
-        keras_inputs = [input_img, scaled_feats, umap_feats]
-        keras_proba = keras_model.predict(keras_inputs, verbose=0)[0]
-        deep_features = extractor.predict(keras_inputs, verbose=0)[0]
+        # The Keras model only takes the image tensor as input
+        keras_proba = keras_model.predict(input_img, verbose=0)[0]
+        deep_features = extractor.predict(input_img, verbose=0)[0]
         
         entropy = scipy.stats.entropy(keras_proba)
         
