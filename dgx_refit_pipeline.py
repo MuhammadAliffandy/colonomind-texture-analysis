@@ -402,8 +402,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--limuc_root",
         type=Path,
-        default=Path("/raid/texture/D13K48009/LIMUC"),
-        help="Root directory of the LIMUC dataset (default: /raid/texture/D13K48009/LIMUC).",
+        default=Path("/raid/D13K48009/texture/LIMUC"),
+        help="Root directory of the LIMUC dataset (default: /raid/D13K48009/texture/LIMUC).",
     )
     parser.add_argument(
         "--batch_size",
