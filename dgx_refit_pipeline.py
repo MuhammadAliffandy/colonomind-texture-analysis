@@ -171,16 +171,16 @@ def _collect_limuc_paths(limuc_root: Path):
     """
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
     image_paths, labels = [], []
+    valid_classes = {"0", "1", "2", "3"}
 
-    for mayo_score in MAYO_CLASSES:
-        class_dir = limuc_root / str(mayo_score)
-        if not class_dir.is_dir():
-            print(f"[WARNING] Missing class directory: {class_dir}")
-            continue
-        for ext in image_extensions:
-            for img_path in sorted(class_dir.glob(f"*{ext}")):
+    for ext in image_extensions:
+        # Recursively search for all images in any subfolder
+        for img_path in limuc_root.rglob(f"*{ext}"):
+            # The parent folder name determines the Mayo score
+            parent_name = img_path.parent.name
+            if parent_name in valid_classes:
                 image_paths.append(img_path)
-                labels.append(mayo_score)
+                labels.append(int(parent_name))
 
     print(
         f"[INFO] Collected {len(image_paths)} images across "
