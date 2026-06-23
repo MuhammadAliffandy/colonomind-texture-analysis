@@ -122,12 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderResults(data) {
         // 1. Update Mayo Badge
-        const score = data.mayo_score;
+        const score = data.prediction;
         mayoScoreText.textContent = `Mayo ${score}`;
         
-        // Extract just the label word (e.g., "Mayo 2 — Moderate" -> "Moderate")
-        const labelParts = data.mayo_label.split('—');
-        mayoLabelText.textContent = labelParts.length > 1 ? labelParts[1].trim() : data.mayo_label;
+        // Extract just the label word (e.g., "Mayo 2 - Moderate" -> "Moderate")
+        const labelParts = data.prediction_label.split('-');
+        mayoLabelText.textContent = labelParts.length > 1 ? labelParts[1].trim() : data.prediction_label;
 
         // Apply Color Theme
         mayoBadge.className = `mayo-badge mayo-${score}`;
@@ -142,20 +142,26 @@ document.addEventListener('DOMContentLoaded', () => {
             confidenceFill.style.width = `${confPercent}%`;
         }, 100);
 
+        // Update Referral Status if present
+        if (data.is_referral) {
+            mayoScoreText.style.color = '#ef4444'; // Red warning
+            mayoLabelText.textContent = "Refer to Doctor";
+        }
+
         resultCard.classList.remove('hidden');
 
         // 3. Update Metrics Grid
-        const m = data.texture_metrics;
-        metrics.contrast.textContent = m.glcm_contrast_mean.toFixed(2);
-        metrics.homogeneity.textContent = m.glcm_homogeneity_mean.toFixed(4);
-        metrics.glcmEnergy.textContent = m.glcm_energy_mean.toFixed(4);
-        metrics.correlation.textContent = m.glcm_correlation_mean.toFixed(4);
-        metrics.dwtLL.textContent = formatLargeNumber(m.dwt_ll_energy);
-        metrics.dwtHH.textContent = m.dwt_hh_variance.toFixed(2);
+        const m = data.features.texture;
+        metrics.contrast.textContent = m.GLCM_Con.toFixed(2);
+        metrics.homogeneity.textContent = m.GLCM_Hom.toFixed(4);
+        metrics.glcmEnergy.textContent = m.GLCM_Dis.toFixed(2); // Using Dissimilarity instead
+        metrics.correlation.textContent = m.LL_Ent.toFixed(2); // Using LL Entropy
+        metrics.dwtLL.textContent = formatLargeNumber(m.LL_Mean); // Using LL Mean
+        metrics.dwtHH.textContent = m.HH_Var.toFixed(2); // Using HH Var
 
-        // 4. Render 3D UMAP
-        if (data.umap_embedding && data.umap_embedding.length >= 3) {
-            renderUmap3D(data.umap_embedding, score);
+        // 4. Render 2D/3D UMAP
+        if (data.features.umap) {
+            renderUmap2D(data.features.umap, score);
         }
     }
 
@@ -169,10 +175,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return num.toFixed(2);
     }
 
-    // --- Plotly 3D Scatter ---
+    // --- Plotly 2D Scatter ---
 
-    function renderUmap3D(coords, mayoScore) {
-        const [u1, u2, u3] = coords;
+    function renderUmap2D(coords, mayoScore) {
+        const u1 = coords.x;
+        const u2 = coords.y;
         
         // Colors mapping to CSS variables
         const colors = ['#10b981', '#fbbf24', '#f97316', '#ef4444'];
@@ -181,10 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const trace = {
             x: [u1],
             y: [u2],
-            z: [u3],
             mode: 'markers',
             marker: {
-                size: 12,
+                size: 14,
                 color: markerColor,
                 line: {
                     color: '#ffffff',
@@ -192,23 +198,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 opacity: 0.9
             },
-            type: 'scatter3d',
+            type: 'scatter',
             name: `Mayo ${mayoScore}`,
-            hoverinfo: 'name+x+y+z'
+            hoverinfo: 'name+x+y'
         };
 
         const layout = {
-            margin: { l: 0, r: 0, b: 0, t: 0 },
+            margin: { l: 40, r: 20, b: 40, t: 20 },
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
-            scene: {
-                xaxis: { title: 'UMAP 1', backgroundcolor: 'rgba(0,0,0,0)', gridcolor: '#334155', showbackground: false },
-                yaxis: { title: 'UMAP 2', backgroundcolor: 'rgba(0,0,0,0)', gridcolor: '#334155', showbackground: false },
-                zaxis: { title: 'UMAP 3', backgroundcolor: 'rgba(0,0,0,0)', gridcolor: '#334155', showbackground: false },
-                camera: {
-                    eye: { x: 1.5, y: 1.5, z: 1.2 }
-                }
-            }
+            xaxis: { title: 'UMAP 1', color: '#94a3b8', gridcolor: 'rgba(255,255,255,0.1)' },
+            yaxis: { title: 'UMAP 2', color: '#94a3b8', gridcolor: 'rgba(255,255,255,0.1)' }
         };
 
         const config = {
