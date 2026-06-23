@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colonomind - Endoscopic Texture Analysis</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-panel">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h1>Colonomind</h1>
+            </div>
+            <p class="subtitle">Hybrid DL + Texture Pipeline</p>
+        </header>
+
+        <main class="dashboard">
+            <!-- Left Column: Upload & Preview -->
+            <section class="panel-left">
+                <div class="glass-panel upload-card">
+                    <h2>Analysis Input</h2>
+                    <div class="upload-zone" id="uploadZone">
+                        <input type="file" id="fileInput" accept="image/jpeg, image/png, image/bmp, image/tiff" hidden>
+                        <div class="upload-content">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Drag & Drop endoscopic image here</p>
+                            <span>or click to browse</span>
+                        </div>
+                        <img id="imagePreview" class="image-preview hidden" alt="Image Preview">
+                    </div>
+                    <button id="analyzeBtn" class="btn-primary" disabled>
+                        <span>Analyze Image</span>
+                        <div class="spinner hidden" id="btnSpinner"></div>
+                    </button>
+                </div>
+
+                <!-- Prediction Results Badge -->
+                <div class="glass-panel result-card hidden" id="resultCard">
+                    <h3>Prediction Result</h3>
+                    <div class="mayo-badge" id="mayoBadge">
+                        <span class="score" id="mayoScoreText">Mayo 0</span>
+                        <span class="label" id="mayoLabelText">Remission</span>
+                    </div>
+                    <div class="confidence-wrapper">
+                        <div class="confidence-header">
+                            <span>Confidence</span>
+                            <span id="confidenceText">0.00%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="confidenceFill"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Visualization & Metrics -->
+            <section class="panel-right">
+                <div class="glass-panel vis-card">
+                    <div class="vis-header">
+                        <h2>Feature Space Embedding</h2>
+                        <span class="badge-tag">UMAP 3-D</span>
+                    </div>
+                    <div id="plotlyContainer" class="plotly-container">
+                        <div class="placeholder-text">Upload an image to visualize its embedding in the clinical feature space.</div>
+                    </div>
+                </div>
+
+                <div class="glass-panel metrics-card">
+                    <h2>Extracted Texture Metrics</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <span class="metric-label">GLCM Contrast</span>
+                            <span class="metric-value" id="valContrast">--</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">GLCM Homogeneity</span>
+                            <span class="metric-value" id="valHomogeneity">--</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">GLCM Energy</span>
+                            <span class="metric-value" id="valGlcmEnergy">--</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">GLCM Correlation</span>
+                            <span class="metric-value" id="valCorrelation">--</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">DWT LL Energy</span>
+                            <span class="metric-value" id="valDwtLL">--</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-label">DWT HH Variance</span>
+                            <span class="metric-value" id="valDwtHH">--</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

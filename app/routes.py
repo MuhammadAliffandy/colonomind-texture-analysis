@@ -505,20 +505,9 @@ def create_app(test_config: dict | None = None):
 
     @app.route("/")
     def index():
-        """Root endpoint — simple status page."""
-        return jsonify(
-            {
-                "service":  "Colonomind Endoscopic Classifier",
-                "version":  "2.0.0",
-                "pipeline": "DL + GLCM/DWT Hybrid",
-                "endpoints": [
-                    "POST /api/predict",
-                    "POST /api/predict/batch",
-                    "POST /api/texture-only",
-                    "GET  /api/health",
-                ],
-            }
-        )
+        """Root endpoint — serves the frontend web application."""
+        from flask import render_template  # noqa: PLC0415
+        return render_template("index.html")
 
     return app
 
