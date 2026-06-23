@@ -30,14 +30,16 @@ if not TMC_ROOT.exists():
 # Default Model Paths
 MODEL_DIR = Path(__file__).resolve().parent.parent / "Model-colono"
 MODEL_PATH = MODEL_DIR / "models-TryFindingBestModel.h5"
+SCALER_PATH = MODEL_DIR / "models-scaler_handcrafted_20.pkl"
+UMAP_PATH = MODEL_DIR / "models-umap_model_mixed.pkl"
 
-if not MODEL_PATH.exists():
-    print(f"[ERROR] Keras model tidak ditemukan di {MODEL_PATH}")
+if not MODEL_PATH.exists() or not SCALER_PATH.exists() or not UMAP_PATH.exists():
+    print(f"[ERROR] Keras model, Scaler, atau UMAP tidak ditemukan di {MODEL_DIR}")
     sys.exit(1)
 
 print("[INFO] Loading Models...")
 
-# 1. Keras Model for Deep Features
+# 1. Models
 full_model = tf.keras.models.load_model(str(MODEL_PATH), compile=False)
 feature_layer = full_model.get_layer("dense_5")
 feature_extractor = tf.keras.Model(
@@ -45,6 +47,9 @@ feature_extractor = tf.keras.Model(
     outputs=feature_layer.output,
     name="feature_extractor"
 )
+
+scaler = joblib.load(str(SCALER_PATH))
+umap_model = joblib.load(str(UMAP_PATH))
 
 # ---------------------------------------------------------------------------
 # Parser Text File
@@ -113,8 +118,6 @@ final_labels = []
 
 print(f"[INFO] Memulai Ekstraksi (Deep Features & 20-Handcrafted) via GPU...")
 
-# Gunakan Batching Keras untuk kecepatan maksimal jika VRAM cukup
-# Namun, fitur handcrafted harus iteratif per gambar
 for i, img_path in enumerate(tqdm(all_img_paths)):
     try:
         # Load Image
@@ -128,8 +131,13 @@ for i, img_path in enumerate(tqdm(all_img_paths)):
         # 1. Ekstraksi Handcrafted (20 Fitur)
         texture_feat = extract_glcm_dwt(processed_img)
         
-        # 2. Ekstraksi Deep Features (Hanya gambar)
-        dl_feat = feature_extractor.predict(input_tensor, verbose=0)[0]
+        # 2. Skala dan UMAP
+        scaled_feat = scaler.transform(np.array(texture_feat).reshape(1, -1))
+        umap_feat = umap_model.transform(scaled_feat)
+        
+        # 3. Ekstraksi Deep Features (Multimodal 3-input)
+        keras_inputs = [input_tensor, scaled_feat, umap_feat]
+        dl_feat = feature_extractor.predict(keras_inputs, verbose=0)[0]
         
         all_texture_feats.append(texture_feat)
         all_dl_feats.append(dl_feat)
