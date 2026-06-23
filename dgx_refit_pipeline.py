@@ -1,4 +1,9 @@
 import os
+
+# MUST be set before importing tensorflow to use Keras 2 compatible mode
+# This fixes the 'SlicingOpLambda' error when loading old .h5 models
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
 import joblib
 import numpy as np
 import tensorflow as tf
