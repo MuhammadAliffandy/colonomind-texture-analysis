@@ -67,15 +67,20 @@ def parse_tmc_split(txt_file):
             parts = line.split(",") if "," in line else line.split()
             
             if len(parts) >= 2:
-                img_name = parts[0].strip()
+                img_name_raw = parts[0].strip()
                 label = int(float(parts[1].strip()))
                 
-                # Resolusi absolute path ke gambar
-                # Jika di txt sudah ada folder 'images/', gunakan langsung
-                if "images/" in img_name or "augment/" in img_name:
-                    abs_path = TMC_ROOT / img_name
+                # Ekstrak nama file saja karena txt aslinya menggunakan absolute path dari mesin lain
+                # misal: /home/zsj/dataset/TMC-UCM/images/P09565.JPG -> P09565.JPG
+                import os
+                basename = os.path.basename(img_name_raw)
+                
+                # Resolusi absolute path ke folder images di TMC_ROOT
+                # Jika aslinya dari folder augment, kita akan cari di augment/ juga
+                if "augment/" in img_name_raw:
+                    abs_path = TMC_ROOT / "augment" / basename
                 else:
-                    abs_path = TMC_ROOT / "images" / img_name
+                    abs_path = TMC_ROOT / "images" / basename
                 
                 if abs_path.exists():
                     image_paths.append(abs_path)
