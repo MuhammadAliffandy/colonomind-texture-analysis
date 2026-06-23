@@ -1,0 +1,17 @@
+name: colono_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - git-lfs
+  - scikit-learn
+  - scikit-image
+  - lightgbm
+  - flask
+  - pip:
+    - PyWavelets
+    - umap-learn
+    - tensorflow
+    - flask-cors
