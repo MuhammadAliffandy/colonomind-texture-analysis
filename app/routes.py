@@ -11,7 +11,7 @@ Inference pipeline (per uploaded image):
     5. Scale the concatenated vector with the fitted StandardScaler.
     6. Produce a 3-D UMAP embedding for the visualisation layer.
     7. Pass the scaled full-dimensional feature vector to the LightGBM agent
-       (model-colono/models-trained_feedback_agent_lightgbm_multimodal.pkl) for Mayo Score prediction.
+       (Model-colono/models-trained_feedback_agent_lightgbm_multimodal.pkl) for Mayo Score prediction.
     8. Return prediction, confidence scores, texture metrics, and UMAP
        coordinates as a JSON response.
 
@@ -62,10 +62,10 @@ from app.texture_extractor import (  # noqa: E402
 # Default artefact paths (overridable via environment variables)
 # ---------------------------------------------------------------------------
 
-DEFAULT_MODEL_PATH  = PROJECT_ROOT / "model-colono" / "models-TryFindingBestModel.h5"
-DEFAULT_SCALER_PATH = PROJECT_ROOT / "model-colono" / "models-scaler_agent.pkl"
-DEFAULT_UMAP_PATH   = PROJECT_ROOT / "model-colono" / "models-umap_model_mixed.pkl"
-DEFAULT_AGENT_PATH  = PROJECT_ROOT / "model-colono" / "models-trained_feedback_agent_lightgbm_multimodal.pkl"
+DEFAULT_MODEL_PATH  = PROJECT_ROOT / "Model-colono" / "models-TryFindingBestModel.h5"
+DEFAULT_SCALER_PATH = PROJECT_ROOT / "Model-colono" / "models-scaler_agent.pkl"
+DEFAULT_UMAP_PATH   = PROJECT_ROOT / "Model-colono" / "models-umap_model_mixed.pkl"
+DEFAULT_AGENT_PATH  = PROJECT_ROOT / "Model-colono" / "models-trained_feedback_agent_lightgbm_multimodal.pkl"
 
 MODEL_PATH  = Path(os.environ.get("MODEL_PATH",  str(DEFAULT_MODEL_PATH)))
 SCALER_PATH = Path(os.environ.get("SCALER_PATH", str(DEFAULT_SCALER_PATH)))
