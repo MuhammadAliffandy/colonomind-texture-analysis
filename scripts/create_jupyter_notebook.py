@@ -43,14 +43,15 @@ from PIL import Image, ImageDraw, ImageFont
 # ==========================================
 # UBAH DIREKTORI INI SESUAI DENGAN SERVER ANDA
 # ==========================================
-BASE_DIR = "."  # Ganti dengan path root folder proyek Anda jika perlu
+BASE_DIR = "."  # Ganti dengan path root folder proyek Colonomind
 DATA_DIR = os.path.join(BASE_DIR, "data")
 REPORTS_DIR = os.path.join(BASE_DIR, "reports")
 FIG_DIR = os.path.join(REPORTS_DIR, "figures")
-IMG_DIR = os.path.join(DATA_DIR, "sample_images") # Tempat menaruh mes0.jpg - mes3.jpg
 
 os.makedirs(FIG_DIR, exist_ok=True)
-os.makedirs(IMG_DIR, exist_ok=True)
+
+# Direktori Gambar Mentah (Raw Image Dataset) di Server Jupyter
+LIMUC_RAW_DIR = "/Colonoscopy/Dataset/LIMUC"
 
 FEAT_NAMES = [
     "LL_Mean", "LL_Std", "LL_Var", "LL_Ent", 
@@ -60,7 +61,7 @@ FEAT_NAMES = [
     "GLCM_Contrast", "GLCM_Dissimilarity", "GLCM_Homogeneity"
 ]
 
-print("✅ Folder siap. Jangan lupa menaruh gambar mes0.jpg - mes3.jpg di folder:", IMG_DIR)
+print("✅ Modul dan Direktori siap.")
 """
     cells.append(create_code_cell(code_imports))
     
@@ -175,18 +176,35 @@ if limuc_umap_res:
 
     # Cell 6: Visualisasi Grid (Gambar + UMAP)
     code_grid = """# Membuat Grid Visualisasi untuk Presentasi Klien
-def get_placeholder_image(mes_class):
+def find_sample_image(base_dir, label):
+    # Mencari gambar di dalam folder class (misal: 0, 1, 2, 3)
+    search_paths = [
+        os.path.join(base_dir, "train_and_validation_sets", str(label)),
+        os.path.join(base_dir, "patient_based_classified_images", str(label)),
+        os.path.join(base_dir, "test_set", str(label))
+    ]
+    for path in search_paths:
+        if os.path.exists(path):
+            for file in os.listdir(path):
+                if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    return os.path.join(path, file)
+    return None
+
+def load_or_create_image(dataset_name, mes_class):
+    img_path = None
+    if dataset_name == "LIMUC":
+        img_path = find_sample_image(LIMUC_RAW_DIR, mes_class)
+        
+    if img_path and os.path.exists(img_path):
+        try:
+            return np.array(Image.open(img_path).convert('RGB').resize((256, 256)))
+        except: pass
+    
+    # Fallback placeholder jika gambar tidak ditemukan
     img = Image.new('RGB', (256, 256), color=(200, 200, 200))
     d = ImageDraw.Draw(img)
     d.text((50, 100), f"Insert MES {mes_class}\\nRaw Image Here", fill=(50, 50, 50))
     return np.array(img)
-
-def load_or_create_image(img_path, mes_class):
-    if os.path.exists(img_path):
-        try:
-            return np.array(Image.open(img_path).convert('RGB').resize((256, 256)))
-        except: pass
-    return get_placeholder_image(mes_class)
 
 if limuc_umap_res:
     umap_dl, umap_texture, labels_sub = limuc_umap_res
@@ -197,8 +215,7 @@ if limuc_umap_res:
         fig, axes = plt.subplots(1, 3, figsize=(18, 5))
         
         # 1. Raw Image
-        img_path = os.path.join(IMG_DIR, f"mes{label}.jpg")
-        img_arr = load_or_create_image(img_path, label)
+        img_arr = load_or_create_image("LIMUC", label)
         axes[0].imshow(img_arr)
         axes[0].set_title(f"Example Raw Image (MES {label})")
         axes[0].axis('off')
