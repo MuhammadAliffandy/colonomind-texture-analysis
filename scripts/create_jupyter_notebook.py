@@ -53,8 +53,8 @@ FIG_DIR = os.path.join(REPORTS_DIR, "figures")
 os.makedirs(FIG_DIR, exist_ok=True)
 
 # Direktori Gambar Mentah (Raw Image Dataset) di Server Jupyter
-LIMUC_RAW_DIR = "/Colonoscopy/Dataset/LIMUC"
-TMC_RAW_DIR = "/Colonoscopy/Dataset/TMC-UCM"
+LIMUC_RAW_DIR = "/home/ubuntu/Colonoscopy/Dataset/LIMUC"
+TMC_RAW_DIR = "/home/ubuntu/Colonoscopy/Dataset/TMC-UCM"
 
 FEAT_NAMES = [
     "LL_Mean", "LL_Std", "LL_Var", "LL_Ent", 
@@ -195,62 +195,39 @@ if tmc_res[0]: print_rules("TMC", tmc_res[2], tmc_res[1])
     cells.append(create_code_cell(code_rules))
 
     # Cell 6: Visualisasi Grid (Gambar + UMAP)
-    code_grid = """def find_sample_image(base_dir, dataset_name, label):
-    # 1. Coba cari via file .txt (TMC-UCM format: filename label)
-    for txt_file in ["train.txt", "test.txt", "val.txt", "labels.txt"]:
-        txt_path = os.path.join(base_dir, txt_file)
-        if os.path.exists(txt_path):
-            with open(txt_path, 'r') as f:
-                for line in f:
-                    parts = line.strip().replace(',', ' ').split()
-                    if len(parts) >= 2:
-                        img_name, img_label = parts[0], parts[-1]
-                        if str(label) == img_label:
-                            # Cari file gambarnya di subfolder umum
-                            for sub in ["images", "augment", "patient_based_classified_images", "train_and_validation_sets", "test_set"]:
-                                candidate = os.path.join(base_dir, sub, img_name)
-                                if os.path.exists(candidate):
-                                    return candidate
-                            # Coba tanpa subfolder
-                            candidate = os.path.join(base_dir, img_name)
-                            if os.path.exists(candidate):
-                                return candidate
-
-    # 2. Logika fallback: pencarian via subfolder class (misal: images/0/img.jpg)
+    code_grid = """def load_or_create_image(dataset_name, mes_class):
+    clean_label = str(int(float(mes_class)))
+    img_path = None
+    
     if dataset_name == "LIMUC":
-        search_paths = [
-            os.path.join(base_dir, "train_and_validation_sets", str(label)),
-            os.path.join(base_dir, "patient_based_classified_images", str(label)),
-            os.path.join(base_dir, "test_set", str(label)),
-            os.path.join(base_dir, str(label))
-        ]
-    else: # TMC-UCM
-        search_paths = [
-            os.path.join(base_dir, "images", str(label)),
-            os.path.join(base_dir, "augment", str(label)),
-            os.path.join(base_dir, str(label))
-        ]
-        
-    for path in search_paths:
-        if os.path.exists(path):
-            for file in os.listdir(path):
-                if file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    return os.path.join(path, file)
-    return None
-
-def load_or_create_image(dataset_name, mes_class):
-    base_dir = LIMUC_RAW_DIR if dataset_name == "LIMUC" else TMC_RAW_DIR
-    img_path = find_sample_image(base_dir, dataset_name, mes_class)
-        
+        # Hardcode path sesuai screenshot agar eksekusi instan
+        limuc_paths = {
+            "0": "/home/ubuntu/Colonoscopy/Dataset/LIMUC/patient_based_classified_images/1/Mayo 0/UC_patient_1_16.bmp",
+            "1": "/home/ubuntu/Colonoscopy/Dataset/LIMUC/patient_based_classified_images/1/Mayo 1/UC_patient_1_11.bmp",
+            "2": "/home/ubuntu/Colonoscopy/Dataset/LIMUC/patient_based_classified_images/1/Mayo 2/UC_patient_1_10.bmp",
+            "3": "/home/ubuntu/Colonoscopy/Dataset/LIMUC/patient_based_classified_images/10/Mayo 3/UC_patient_10_27.bmp"
+        }
+        img_path = limuc_paths.get(clean_label)
+    else:
+        # Untuk TMC-UCM, kita biarkan pencarian sederhana (dengan dukungan .bmp)
+        target_folders = [clean_label, f"Mayo {clean_label}", f"MES {clean_label}"]
+        for root, dirs, files in os.walk(TMC_RAW_DIR):
+            if os.path.basename(root) in target_folders:
+                for file in files:
+                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+                        img_path = os.path.join(root, file)
+                        break
+            if img_path: break
+            
     if img_path and os.path.exists(img_path):
         try:
             return np.array(Image.open(img_path).convert('RGB').resize((256, 256)))
         except: pass
     
-    # Fallback placeholder jika gambar tidak ditemukan
+    # Fallback placeholder jika gagal
     img = Image.new('RGB', (256, 256), color=(200, 200, 200))
     d = ImageDraw.Draw(img)
-    d.text((50, 100), f"Insert {dataset_name}\\nMES {mes_class} Image Here", fill=(50, 50, 50))
+    d.text((50, 100), f"Insert {dataset_name}\\nMES {clean_label} Image Here", fill=(50, 50, 50))
     return np.array(img)
 
 def plot_presentation_grid(dataset_name, umap_res):
@@ -263,28 +240,32 @@ def plot_presentation_grid(dataset_name, umap_res):
     for label in unique_labels:
         fig, axes = plt.subplots(1, 3, figsize=(18, 5))
         
+        # Bersihkan desimal
+        clean_label = str(int(float(label)))
+        
         # 1. Raw Image
         img_arr = load_or_create_image(dataset_name, label)
         axes[0].imshow(img_arr)
-        axes[0].set_title(f"{dataset_name} Raw Image (MES {label})")
+        axes[0].set_title(f"{dataset_name} Raw Image (MES {clean_label})")
         axes[0].axis('off')
         
         # 2. UMAP Before
         axes[1].scatter(umap_dl[:, 0], umap_dl[:, 1], color='lightgray', alpha=0.3, s=10)
         mask = (labels_sub == label)
-        axes[1].scatter(umap_dl[mask, 0], umap_dl[mask, 1], color=colors[int(label)], label=f'MES {label}', alpha=0.8, s=15)
+        axes[1].scatter(umap_dl[mask, 0], umap_dl[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label}', alpha=0.8, s=15)
         axes[1].set_title('Raw Deep Learning UMAP (Before)')
         axes[1].axis('off')
         
         # 3. UMAP After
         axes[2].scatter(umap_texture[:, 0], umap_texture[:, 1], color='lightgray', alpha=0.3, s=10)
-        axes[2].scatter(umap_texture[mask, 0], umap_texture[mask, 1], color=colors[int(label)], label=f'MES {label}', alpha=0.8, s=15)
+        axes[2].scatter(umap_texture[mask, 0], umap_texture[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label}', alpha=0.8, s=15)
         axes[2].set_title('Texture Analysis UMAP (After)')
         axes[2].axis('off')
         
         plt.tight_layout()
         plt.show()
 
+# Panggil fungsi visualisasinya
 plot_presentation_grid("LIMUC", limuc_res)
 plot_presentation_grid("TMC", tmc_res)
 """
