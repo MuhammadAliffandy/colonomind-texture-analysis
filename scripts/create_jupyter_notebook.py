@@ -196,7 +196,27 @@ if tmc_res[0]: print_rules("TMC", tmc_res[2], tmc_res[1])
 
     # Cell 6: Visualisasi Grid (Gambar + UMAP)
     code_grid = """def find_sample_image(base_dir, dataset_name, label):
-    # Logika pencarian folder berdasarkan screenshot server
+    # 1. Coba cari via file .txt (TMC-UCM format: filename label)
+    for txt_file in ["train.txt", "test.txt", "val.txt", "labels.txt"]:
+        txt_path = os.path.join(base_dir, txt_file)
+        if os.path.exists(txt_path):
+            with open(txt_path, 'r') as f:
+                for line in f:
+                    parts = line.strip().replace(',', ' ').split()
+                    if len(parts) >= 2:
+                        img_name, img_label = parts[0], parts[-1]
+                        if str(label) == img_label:
+                            # Cari file gambarnya di subfolder umum
+                            for sub in ["images", "augment", "patient_based_classified_images", "train_and_validation_sets", "test_set"]:
+                                candidate = os.path.join(base_dir, sub, img_name)
+                                if os.path.exists(candidate):
+                                    return candidate
+                            # Coba tanpa subfolder
+                            candidate = os.path.join(base_dir, img_name)
+                            if os.path.exists(candidate):
+                                return candidate
+
+    # 2. Logika fallback: pencarian via subfolder class (misal: images/0/img.jpg)
     if dataset_name == "LIMUC":
         search_paths = [
             os.path.join(base_dir, "train_and_validation_sets", str(label)),
