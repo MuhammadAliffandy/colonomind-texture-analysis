@@ -29,6 +29,9 @@ def generate_notebook(output_path):
     
     # Cell 2: Imports & Variables
     code_imports = """import os
+import cv2
+import pywt
+import scipy.stats
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -41,6 +44,11 @@ from sklearn.preprocessing import StandardScaler
 from PIL import Image, ImageDraw, ImageFont
 import warnings
 warnings.filterwarnings('ignore')
+
+try:
+    from skimage.feature import graycomatrix, graycoprops
+except ImportError:
+    from skimage.feature import greycomatrix as graycomatrix, greycoprops as graycoprops
 
 # ==========================================
 # UBAH DIREKTORI INI SESUAI DENGAN SERVER ANDA
@@ -108,7 +116,7 @@ print("✅ Modul dan Direktori siap.")
     rf_tex = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
     rf_tex.fit(X_train_tex, y_train)
     
-    return (umap_dl, umap_texture, labels_sub), rf_tex, (dl_features, texture_features, labels)
+    return (umap_dl, umap_texture, labels_sub, scaler_dl, reducer_dl, scaler_tex, reducer_texture), rf_tex, (dl_features, texture_features, labels)
 
 print("Fungsi analisis siap dijalankan.")
 """
@@ -119,7 +127,7 @@ print("Fungsi analisis siap dijalankan.")
     umap_res, rf_model, raw_data = analyze_and_plot_umap(dataset_name, dl_path, tex_path, lbl_path)
 
     if umap_res:
-        umap_dl, umap_texture, labels_sub = umap_res
+        umap_dl, umap_texture, labels_sub, _, _, _, _ = umap_res
         unique_labels = np.unique(labels_sub)
         colors = sns.color_palette("husl", len(unique_labels))
         
@@ -195,7 +203,45 @@ if tmc_res[0]: print_rules("TMC", tmc_res[2], tmc_res[1])
     cells.append(create_code_cell(code_rules))
 
     # Cell 6: Visualisasi Grid (Gambar + UMAP)
-    code_grid = """def load_or_create_image(dataset_name, mes_class):
+    code_grid = """def _smart_preprocess(img):
+    if img is None: return None
+    h, w = img.shape[:2]
+    if h > 450 and w > 550: 
+        crop = img[30:430, 200:550]
+        if crop.size == 0: crop = img
+    else: crop = img
+    return cv2.resize(crop, (224, 224))
+
+def extract_texture_from_image(img_path):
+    img = cv2.imread(img_path)
+    if img is None: return None
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
+    processed = _smart_preprocess(img)
+    gray = cv2.cvtColor(processed, cv2.COLOR_RGB2GRAY)
+        
+    coeffs = pywt.dwt2(gray, 'db1')
+    LL, (LH, HL, HH) = coeffs
+    
+    def _stats(band):
+        flat = np.abs(band.flatten()) + 1e-6
+        return [np.mean(band), np.std(band), np.var(band), scipy.stats.entropy(flat)]
+    
+    feats = []
+    for band in [LL, LH, HL, HH]: 
+        feats.extend(_stats(band)) 
+    feats.append(np.sum(np.square(HH))) 
+    
+    gray_norm = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    glcm = graycomatrix(gray_norm, [5], [0, np.pi/4, np.pi/2], 256, symmetric=True, normed=True)
+    feats.extend([
+        graycoprops(glcm, 'contrast').mean(), 
+        graycoprops(glcm, 'dissimilarity').mean(), 
+        graycoprops(glcm, 'homogeneity').mean()
+    ])
+    return np.array(feats, dtype=np.float32).reshape(1, -1)
+
+def load_or_create_image(dataset_name, mes_class):
     clean_label = str(int(float(mes_class)))
     img_path = None
     
@@ -209,7 +255,7 @@ if tmc_res[0]: print_rules("TMC", tmc_res[2], tmc_res[1])
         }
         img_path = limuc_paths.get(clean_label)
     else:
-        # Untuk TMC-UCM, kita biarkan pencarian sederhana (dengan dukungan .bmp)
+        # Untuk TMC-UCM, pencarian sederhana dengan tambahan file .bmp
         target_folders = [clean_label, f"Mayo {clean_label}", f"MES {clean_label}"]
         for root, dirs, files in os.walk(TMC_RAW_DIR):
             if os.path.basename(root) in target_folders:
@@ -219,20 +265,17 @@ if tmc_res[0]: print_rules("TMC", tmc_res[2], tmc_res[1])
                         break
             if img_path: break
             
+    img_arr = None
     if img_path and os.path.exists(img_path):
         try:
-            return np.array(Image.open(img_path).convert('RGB').resize((256, 256)))
+            img_arr = np.array(Image.open(img_path).convert('RGB').resize((256, 256)))
         except: pass
-    
-    # Fallback placeholder jika gagal
-    img = Image.new('RGB', (256, 256), color=(200, 200, 200))
-    d = ImageDraw.Draw(img)
-    d.text((50, 100), f"Insert {dataset_name}\\nMES {clean_label} Image Here", fill=(50, 50, 50))
-    return np.array(img)
+        
+    return img_arr, img_path
 
 def plot_presentation_grid(dataset_name, umap_res):
     if not umap_res[0]: return
-    umap_dl, umap_texture, labels_sub = umap_res[0]
+    umap_dl, umap_texture, labels_sub, scaler_dl, reducer_dl, scaler_tex, reducer_texture = umap_res[0]
     unique_labels = np.unique(labels_sub)
     colors = sns.color_palette("husl", len(unique_labels))
     
@@ -244,22 +287,46 @@ def plot_presentation_grid(dataset_name, umap_res):
         clean_label = str(int(float(label)))
         
         # 1. Raw Image
-        img_arr = load_or_create_image(dataset_name, label)
-        axes[0].imshow(img_arr)
-        axes[0].set_title(f"{dataset_name} Raw Image (MES {clean_label})")
+        img_arr, img_path = load_or_create_image(dataset_name, label)
+        
+        if img_arr is not None:
+            axes[0].imshow(img_arr)
+            axes[0].set_title(f"{dataset_name} Raw Image (MES {clean_label})")
+        else:
+            # Fallback
+            img = Image.new('RGB', (256, 256), color=(200, 200, 200))
+            d = ImageDraw.Draw(img)
+            d.text((50, 100), f"Insert {dataset_name}\\nMES {clean_label} Image Here", fill=(50, 50, 50))
+            axes[0].imshow(np.array(img))
+            axes[0].set_title(f"{dataset_name} Image Not Found")
+            
         axes[0].axis('off')
         
         # 2. UMAP Before
         axes[1].scatter(umap_dl[:, 0], umap_dl[:, 1], color='lightgray', alpha=0.3, s=10)
         mask = (labels_sub == label)
-        axes[1].scatter(umap_dl[mask, 0], umap_dl[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label}', alpha=0.8, s=15)
+        axes[1].scatter(umap_dl[mask, 0], umap_dl[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label}', alpha=0.5, s=15)
         axes[1].set_title('Raw Deep Learning UMAP (Before)')
         axes[1].axis('off')
         
-        # 3. UMAP After
+        # 3. UMAP After (Highlight single sample)
         axes[2].scatter(umap_texture[:, 0], umap_texture[:, 1], color='lightgray', alpha=0.3, s=10)
-        axes[2].scatter(umap_texture[mask, 0], umap_texture[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label}', alpha=0.8, s=15)
+        axes[2].scatter(umap_texture[mask, 0], umap_texture[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label} Cluster', alpha=0.5, s=15)
+        
+        # Extract texture from the single image and plot it as a big star!
+        if img_path and os.path.exists(img_path):
+            try:
+                single_feat = extract_texture_from_image(img_path)
+                single_feat_scaled = scaler_tex.transform(single_feat)
+                single_umap = reducer_texture.transform(single_feat_scaled)
+                
+                # Plot the single star
+                axes[2].scatter(single_umap[0, 0], single_umap[0, 1], color='black', marker='*', s=600, edgecolor='white', linewidth=2, label=f'This Sample Image')
+            except Exception as e:
+                print(f"Failed to project single image {img_path}: {e}")
+                
         axes[2].set_title('Texture Analysis UMAP (After)')
+        axes[2].legend()
         axes[2].axis('off')
         
         plt.tight_layout()
