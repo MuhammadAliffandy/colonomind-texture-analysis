@@ -30,6 +30,7 @@ def generate_notebook(output_path):
     # Cell 2: Imports & Variables
     code_imports = """import os
 import cv2
+import shutil
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -279,6 +280,86 @@ plot_presentation_grid("LIMUC", limuc_res)
 plot_presentation_grid("TMC", tmc_res)
 """
     cells.append(create_code_cell(code_grid))
+
+    # Cell 7: ZIP Exporter
+    code_export = """def export_and_zip_figures(limuc_res, tmc_res, zip_filename="Texture_Analysis_Presentation_Figures"):
+    print("Mempersiapkan folder export...")
+    export_dir = os.path.join(BASE_DIR, "export_figures")
+    os.makedirs(export_dir, exist_ok=True)
+    
+    datasets = {"LIMUC": limuc_res, "TMC": tmc_res}
+    
+    for dataset_name, res in datasets.items():
+        if not res or not res[0]: continue
+        
+        umap_dl, umap_texture, labels_sub = res[0][:3]
+        rf_model = res[1]
+        unique_labels = np.unique(labels_sub)
+        colors = sns.color_palette("husl", len(unique_labels))
+        
+        # 1. Simpan Feature Importance (Bar Chart)
+        print(f"Menyimpan Feature Importance untuk {dataset_name}...")
+        importances = rf_model.feature_importances_
+        indices = np.argsort(importances)[::-1]
+        
+        fig_feat = plt.figure(figsize=(12, 6))
+        plt.title(f"Feature Importances for {dataset_name} (Texture Analysis)")
+        plt.bar(range(len(importances)), importances[indices], align="center")
+        plt.xticks(range(len(importances)), [FEAT_NAMES[i] for i in indices], rotation=45, ha='right')
+        plt.xlim([-1, len(importances)])
+        plt.tight_layout()
+        plt.savefig(os.path.join(export_dir, f"{dataset_name}_Feature_Importance.png"), dpi=150, bbox_inches='tight')
+        plt.close(fig_feat)
+        
+        # 2. Simpan UMAP Grids
+        print(f"Menyimpan UMAP Grids untuk {dataset_name}...")
+        for label in unique_labels:
+            fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+            clean_label = str(int(float(label)))
+            
+            # Raw Image
+            img_arr = load_or_create_image(dataset_name, label)
+            if img_arr is not None:
+                axes[0].imshow(img_arr)
+                axes[0].set_title(f"{dataset_name} Raw Image (MES {clean_label})")
+            axes[0].axis('off')
+            
+            # UMAP Before
+            axes[1].scatter(umap_dl[:, 0], umap_dl[:, 1], color='lightgray', alpha=0.3, s=10)
+            mask = (labels_sub == label)
+            axes[1].scatter(umap_dl[mask, 0], umap_dl[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label}', alpha=0.5, s=15)
+            axes[1].set_title('Raw Deep Learning UMAP (Before)')
+            axes[1].axis('off')
+            
+            # UMAP After
+            axes[2].scatter(umap_texture[:, 0], umap_texture[:, 1], color='lightgray', alpha=0.3, s=10)
+            axes[2].scatter(umap_texture[mask, 0], umap_texture[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label} Cluster', alpha=0.5, s=15)
+            
+            representive_idx = np.where(mask)[0]
+            if len(representive_idx) > 0:
+                star_x = umap_texture[representive_idx[0], 0]
+                star_y = umap_texture[representive_idx[0], 1]
+                axes[2].scatter(star_x, star_y, color=colors[int(float(label))], marker='o', s=60, edgecolor='black', linewidth=1.5, zorder=5, label=f'Current Image')
+                    
+            axes[2].set_title('Texture Analysis UMAP (After)')
+            axes[2].legend()
+            axes[2].axis('off')
+            
+            plt.tight_layout()
+            # Save silently instead of showing
+            plt.savefig(os.path.join(export_dir, f"{dataset_name}_Grid_MES_{clean_label}.png"), dpi=200, bbox_inches='tight')
+            plt.close(fig)
+            
+    # Zip direktori tersebut
+    print("Membungkus ke file ZIP...")
+    shutil.make_archive(zip_filename, 'zip', export_dir)
+    print(f"✅ Selesai! Semua figure telah disimpan dan di-ZIP.")
+    print(f"Silakan download file '{zip_filename}.zip' yang ada di direktori server Jupyter Anda!")
+
+# Jalankan fungsi ekspor
+export_and_zip_figures(limuc_res, tmc_res)
+"""
+    cells.append(create_code_cell(code_export))
 
     notebook = {
         "cells": cells,
