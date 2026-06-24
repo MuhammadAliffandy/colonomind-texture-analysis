@@ -23,8 +23,8 @@ def generate_notebook(output_path):
     # Cell 1: Intro
     cells.append(create_markdown_cell(
         "# Texture Analysis - Client Presentation\n\n"
-        "Gunakan notebook ini untuk me-run analisa tekstur (UMAP StandardScaler, Feature Importance, Rule-Based Thresholds, dan Presentation Grid) untuk dataset **LIMUC** dan **TMC**.\n\n"
-        "**PENTING**: Silakan ubah variabel path/direktori di blok bawah ini sesuai letak dataset di server Jupyter Anda."
+        "Use this notebook to run texture analysis (UMAP StandardScaler, Feature Importance, Rule-Based Thresholds, and Presentation Grid) for **LIMUC** and **TMC** datasets.\n\n"
+        "**IMPORTANT**: Please modify the paths/directories in the block below according to the dataset locations on your Jupyter server."
     ))
     
     # Cell 2: Imports & Variables
@@ -44,16 +44,16 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ==========================================
-# UBAH DIREKTORI INI SESUAI DENGAN SERVER ANDA
+# CHANGE DIRECTORIES ACCORDING TO YOUR SERVER
 # ==========================================
-BASE_DIR = "."  # Ganti dengan path root folder proyek Colonomind
+BASE_DIR = "."  # Change to the root folder path of the Colonomind project
 DATA_DIR = os.path.join(BASE_DIR, "data")
 REPORTS_DIR = os.path.join(BASE_DIR, "reports")
 FIG_DIR = os.path.join(REPORTS_DIR, "figures")
 
 os.makedirs(FIG_DIR, exist_ok=True)
 
-# Direktori Gambar Mentah (Raw Image Dataset) di Server Jupyter
+# Raw Image Dataset Directories on Jupyter Server
 LIMUC_RAW_DIR = "/home/ubuntu/Colonoscopy/Dataset/LIMUC"
 TMC_RAW_DIR = "/home/ubuntu/Colonoscopy/Dataset/TMC-UCM"
 
@@ -65,7 +65,7 @@ FEAT_NAMES = [
     "GLCM_Contrast", "GLCM_Dissimilarity", "GLCM_Homogeneity"
 ]
 
-print("✅ Modul dan Direktori siap.")
+print("✅ Modules and Directories are ready.")
 """
     cells.append(create_code_cell(code_imports))
     
@@ -77,7 +77,7 @@ print("✅ Modul dan Direktori siap.")
         texture_features = np.load(texture_path)
         labels = np.load(labels_path)
     except FileNotFoundError as e:
-        print(f"❌ File tidak ditemukan: {e}. Pastikan file .npy ada di direktori yang benar.")
+        print(f"❌ File not found: {e}. Ensure the .npy files are in the correct directory.")
         return None, None, None
         
     subsample_idx = np.arange(dl_features.shape[0])
@@ -96,7 +96,7 @@ print("✅ Modul dan Direktori siap.")
     texture_sub_scaled = scaler_tex.fit_transform(texture_sub)
     
     # UMAP
-    print("Computing UMAP embeddings (Ini mungkin memakan waktu 1-2 menit)...")
+    print("Computing UMAP embeddings (This may take 1-2 minutes)...")
     reducer_dl = umap.UMAP(n_neighbors=30, min_dist=0.3, random_state=42)
     umap_dl = reducer_dl.fit_transform(dl_sub_scaled)
     
@@ -111,7 +111,7 @@ print("✅ Modul dan Direktori siap.")
     
     return (umap_dl, umap_texture, labels_sub), rf_tex, (dl_features, texture_features, labels)
 
-print("Fungsi analisis siap dijalankan.")
+print("Analysis function is ready to run.")
 """
     cells.append(create_code_cell(code_umap))
     
@@ -149,7 +149,7 @@ print("Fungsi analisis siap dijalankan.")
         return umap_res, rf_model, raw_data
     return None, None, None
 
-# Eksekusi LIMUC
+# Execute LIMUC
 limuc_res = run_analysis_for_dataset(
     "LIMUC",
     os.path.join(DATA_DIR, "limuc_features", "limuc_dl_features.npy"),
@@ -157,7 +157,7 @@ limuc_res = run_analysis_for_dataset(
     os.path.join(DATA_DIR, "limuc_features", "limuc_labels.npy")
 )
 
-# Eksekusi TMC
+# Execute TMC
 tmc_res = run_analysis_for_dataset(
     "TMC",
     os.path.join(DATA_DIR, "tmc_features", "tmc_dl_features.npy"),
@@ -171,14 +171,14 @@ tmc_res = run_analysis_for_dataset(
     code_rules = """def print_rules(dataset_name, raw_data, rf_model):
     _, texture_features, labels = raw_data
     importances = rf_model.feature_importances_
-    top_indices = np.argsort(importances)[::-1][:3] # 3 fitur teratas
+    top_indices = np.argsort(importances)[::-1][:3] # Top 3 features
     top_features = [FEAT_NAMES[i] for i in top_indices]
     
     df = pd.DataFrame(texture_features, columns=FEAT_NAMES)
     df['Label'] = labels
     
     print(f"=== {dataset_name} Rule-Based Thresholds ===")
-    print(f"Fitur terpenting: {', '.join(top_features)}\\n")
+    print(f"Top features: {', '.join(top_features)}\\n")
     
     for label in np.unique(labels):
         print(f"--- MES {label} ---")
@@ -187,7 +187,7 @@ tmc_res = run_analysis_for_dataset(
             q1 = class_df[feat_name].quantile(0.25)
             q3 = class_df[feat_name].quantile(0.75)
             mean_val = class_df[feat_name].mean()
-            print(f"{feat_name}: {q1:.4f} sampai {q3:.4f} (Rata-rata: {mean_val:.4f})")
+            print(f"{feat_name}: {q1:.4f} to {q3:.4f} (Mean: {mean_val:.4f})")
         print("")
 
 if limuc_res[0]: print_rules("LIMUC", limuc_res[2], limuc_res[1])
@@ -209,7 +209,7 @@ if tmc_res[0]: print_rules("TMC", tmc_res[2], tmc_res[1])
         }
         img_path = limuc_paths.get(clean_label)
     else:
-        # Hardcode TMC dari screenshot train.txt pengguna (format nama file dari /home/zsj/...)
+        # Hardcode TMC from user's train.txt
         tmc_paths = {
             "0": "/home/ubuntu/Colonoscopy/Dataset/TMC-UCM/images/P02204.JPG",
             "1": "/home/ubuntu/Colonoscopy/Dataset/TMC-UCM/images/P04880.JPG",
@@ -227,12 +227,11 @@ if tmc_res[0]: print_rules("TMC", tmc_res[2], tmc_res[1])
 def plot_presentation_grid(dataset_name, umap_res):
     if not umap_res[0]: return
     
-    # Ambil 3 data pertama saja (berfungsi baik jika Cell 3 sudah update atau belum)
     umap_dl, umap_texture, labels_sub = umap_res[0][:3]
     unique_labels = np.unique(labels_sub)
     colors = sns.color_palette("husl", len(unique_labels))
     
-    print(f"\\n--- Visualisasi Grid {dataset_name} ---")
+    print(f"\\n--- Grid Visualization {dataset_name} ---")
     for label in unique_labels:
         fig, axes = plt.subplots(1, 3, figsize=(18, 5))
         clean_label = str(int(float(label)))
@@ -243,7 +242,6 @@ def plot_presentation_grid(dataset_name, umap_res):
             axes[0].imshow(img_arr)
             axes[0].set_title(f"{dataset_name} Raw Image (MES {clean_label})")
         else:
-            # Fallback
             img = Image.new('RGB', (256, 256), color=(200, 200, 200))
             d = ImageDraw.Draw(img)
             d.text((50, 100), f"Insert {dataset_name}\\nMES {clean_label} Image Here", fill=(50, 50, 50))
@@ -258,17 +256,16 @@ def plot_presentation_grid(dataset_name, umap_res):
         axes[1].set_title('Raw Deep Learning UMAP (Before)')
         axes[1].axis('off')
         
-        # 3. UMAP After (Dengan Visualisasi Titik Mewakili Gambar)
+        # 3. UMAP After
         axes[2].scatter(umap_texture[:, 0], umap_texture[:, 1], color='lightgray', alpha=0.3, s=10)
         axes[2].scatter(umap_texture[mask, 0], umap_texture[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label} Cluster', alpha=0.5, s=15)
         
-        # TEKNOLOGI LANGSUNG: Ambil satu titik representatif dari klaster ini sebagai posisi gambar
         representive_idx = np.where(mask)[0]
         if len(representive_idx) > 0:
             star_x = umap_texture[representive_idx[0], 0]
             star_y = umap_texture[representive_idx[0], 1]
-            # Diganti dari bintang menjadi titik tebal sewarna namun lebih tajam
-            axes[2].scatter(star_x, star_y, color=colors[int(float(label))], marker='o', s=300, edgecolor='black', linewidth=2, zorder=5, label=f'Posisi Gambar Ini')
+            # Normal size but with thick black outline for visibility
+            axes[2].scatter(star_x, star_y, color=colors[int(float(label))], marker='o', s=60, edgecolor='black', linewidth=1.5, zorder=5, label=f'Current Image')
                 
         axes[2].set_title('Texture Analysis UMAP (After)')
         axes[2].legend()
@@ -277,7 +274,7 @@ def plot_presentation_grid(dataset_name, umap_res):
         plt.tight_layout()
         plt.show()
 
-# Panggil fungsi visualisasinya
+# Run the visualization
 plot_presentation_grid("LIMUC", limuc_res)
 plot_presentation_grid("TMC", tmc_res)
 """
@@ -292,7 +289,7 @@ plot_presentation_grid("TMC", tmc_res)
     
     with open(output_path, 'w') as f:
         json.dump(notebook, f, indent=2)
-    print(f"Jupyter Notebook berhasil dibuat di: {output_path}")
+    print(f"Jupyter Notebook successfully created at: {output_path}")
 
 if __name__ == "__main__":
     base_dir = os.path.join(os.path.dirname(__file__), '..')
