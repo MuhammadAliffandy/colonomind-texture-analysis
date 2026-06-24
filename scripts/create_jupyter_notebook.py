@@ -209,14 +209,14 @@ if tmc_res[0]: print_rules("TMC", tmc_res[2], tmc_res[1])
         }
         img_path = limuc_paths.get(clean_label)
     else:
-        target_folders = [clean_label, f"Mayo {clean_label}", f"MES {clean_label}"]
-        for root, dirs, files in os.walk(TMC_RAW_DIR):
-            if os.path.basename(root) in target_folders:
-                for file in files:
-                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
-                        img_path = os.path.join(root, file)
-                        break
-            if img_path: break
+        # Hardcode TMC dari screenshot train.txt pengguna (format nama file dari /home/zsj/...)
+        tmc_paths = {
+            "0": "/home/ubuntu/Colonoscopy/Dataset/TMC-UCM/images/P02204.JPG",
+            "1": "/home/ubuntu/Colonoscopy/Dataset/TMC-UCM/images/P04880.JPG",
+            "2": "/home/ubuntu/Colonoscopy/Dataset/TMC-UCM/images/P07855.JPG",
+            "3": "/home/ubuntu/Colonoscopy/Dataset/TMC-UCM/images/P10984.JPG"
+        }
+        img_path = tmc_paths.get(clean_label)
             
     img_arr = None
     if img_path and os.path.exists(img_path):
