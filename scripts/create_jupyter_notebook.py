@@ -258,16 +258,17 @@ def plot_presentation_grid(dataset_name, umap_res):
         axes[1].set_title('Raw Deep Learning UMAP (Before)')
         axes[1].axis('off')
         
-        # 3. UMAP After (Dengan Visualisasi Bintang "Langsung")
+        # 3. UMAP After (Dengan Visualisasi Titik Mewakili Gambar)
         axes[2].scatter(umap_texture[:, 0], umap_texture[:, 1], color='lightgray', alpha=0.3, s=10)
         axes[2].scatter(umap_texture[mask, 0], umap_texture[mask, 1], color=colors[int(float(label))], label=f'MES {clean_label} Cluster', alpha=0.5, s=15)
         
-        # TEKNOLOGI LANGSUNG: Ambil satu titik representatif dari klaster ini sebagai posisi bintang
+        # TEKNOLOGI LANGSUNG: Ambil satu titik representatif dari klaster ini sebagai posisi gambar
         representive_idx = np.where(mask)[0]
         if len(representive_idx) > 0:
             star_x = umap_texture[representive_idx[0], 0]
             star_y = umap_texture[representive_idx[0], 1]
-            axes[2].scatter(star_x, star_y, color='black', marker='*', s=800, edgecolor='white', linewidth=2, label=f'Posisi Gambar Ini')
+            # Diganti dari bintang menjadi titik tebal sewarna namun lebih tajam
+            axes[2].scatter(star_x, star_y, color=colors[int(float(label))], marker='o', s=300, edgecolor='black', linewidth=2, zorder=5, label=f'Posisi Gambar Ini')
                 
         axes[2].set_title('Texture Analysis UMAP (After)')
         axes[2].legend()
