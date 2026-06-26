@@ -395,7 +395,7 @@ def main():
             vals = mean_vals[top_25_idx]
             x_pos = np.arange(len(top_feature_names))
             
-            colors_bar = ['#d62728' if v > 0 else '#1f77b4' for v in vals]
+            colors_bar = '#1f77b4'  # Warna biru solid sesuai standar paper
             ax_bar.bar(x_pos, vals, color=colors_bar, edgecolor='white')
             ax_bar.axhline(0, color='black', linewidth=1)
             ax_bar.set_xticks(x_pos)
