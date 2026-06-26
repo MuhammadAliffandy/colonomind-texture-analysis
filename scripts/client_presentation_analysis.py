@@ -1,4 +1,13 @@
 import os
+
+# Limit thread bindings for Numpy/Scikit-Learn/OpenBLAS to prevent 
+# "OpenBLAS : Program is Terminated. Because you tried to allocate too many memory regions"
+# This happens on DGX because it has more CPU cores (e.g., 128+) than OpenBLAS supports by default.
+os.environ["OPENBLAS_NUM_THREADS"] = "32"
+os.environ["MKL_NUM_THREADS"] = "32"
+os.environ["OMP_NUM_THREADS"] = "32"
+os.environ["NUMEXPR_NUM_THREADS"] = "32"
+
 import cv2
 import numpy as np
 import pandas as pd
