@@ -181,7 +181,8 @@ def generate_threshold_table(features, labels, target_feats, dataset_name):
     print(f"✅ Disimpan Threshold Table {dataset_name} ke: {csv_path}")
     return df
 
-def get_dynamic_sample_paths(root_dir, dataset_type):
+def get_dynamic_sample_paths_limuc(root_dir):
+    """Scan LIMUC directory for one sample image per Mayo class (0-3)."""
     sample_dict = {}
     needed = {0, 1, 2, 3}
     for p in Path(root_dir).rglob("*.*"):
@@ -189,14 +190,39 @@ def get_dynamic_sample_paths(root_dir, dataset_type):
         if p.suffix.lower() in ['.bmp', '.jpg', '.jpeg', '.png']:
             parent_name = p.parent.name
             for mes in list(needed):
-                if dataset_type == "LIMUC" and (str(mes) in parent_name or f"Mayo {mes}" in parent_name):
+                if f"Mayo {mes}" in parent_name or parent_name == str(mes):
                     sample_dict[str(mes)] = str(p)
                     needed.remove(mes)
                     break
-                elif dataset_type == "TMC" and str(mes) in parent_name:
-                    sample_dict[str(mes)] = str(p)
-                    needed.remove(mes)
-                    break
+    for mes in needed:
+        sample_dict[str(mes)] = ""
+    return sample_dict
+
+def get_dynamic_sample_paths_tmc(root_dir):
+    """Read train.txt / test.txt to pick one sample image per TMC label (0-3).
+    TMC images are flat inside /images/, not separated by class folders."""
+    sample_dict = {}
+    needed = {0, 1, 2, 3}
+    
+    for txt_name in ["train.txt", "test.txt"]:
+        txt_file = Path(root_dir) / txt_name
+        if not txt_file.exists():
+            continue
+        with open(txt_file, "r") as f:
+            for line in f:
+                if not needed: break
+                line = line.strip()
+                if not line: continue
+                parts = line.split(",") if "," in line else line.split()
+                if len(parts) >= 2:
+                    img_name_raw = parts[0].strip()
+                    label = int(float(parts[1].strip()))
+                    if label in needed:
+                        basename = os.path.basename(img_name_raw)
+                        abs_path = Path(root_dir) / "images" / basename
+                        if abs_path.exists():
+                            sample_dict[str(label)] = str(abs_path)
+                            needed.remove(label)
     for mes in needed:
         sample_dict[str(mes)] = ""
     return sample_dict
@@ -370,7 +396,7 @@ def main():
         top_25_idx = np.arange(20)
         top_feature_names = [feat_names_plot[i].replace('Green_', '') for i in top_25_idx]
 
-        limuc_sample_paths = get_dynamic_sample_paths(LIMUC_RAW_DIR, "LIMUC")
+        limuc_sample_paths = get_dynamic_sample_paths_limuc(LIMUC_RAW_DIR)
 
         for mes in range(4):
             ax_img = fig.add_subplot(gs[mes, 0])
@@ -391,8 +417,14 @@ def main():
             mes_mask = (limuc_labels == mes)
             if np.sum(mes_mask) > 0: mean_vals = np.mean(np.abs(limuc_features[mes_mask]), axis=0)
             else: mean_vals = np.zeros(actual_dim)
+            
+            # Hitung deviasi fitur MES ini terhadap rata-rata global
+            # untuk menemukan fitur yang paling UNIK/DISTINCTIVE per MES
+            global_mean_limuc = np.mean(np.abs(limuc_features), axis=0)
+            deviation = np.abs(mean_vals - global_mean_limuc)
                 
             vals = mean_vals[top_25_idx]
+            dev_vals = deviation[top_25_idx]
             x_pos = np.arange(len(top_feature_names))
             
             colors_bar = '#1f77b4'  # Warna biru solid sesuai standar paper
@@ -403,7 +435,8 @@ def main():
             ax_bar.set_yscale('log')
             ax_bar.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
             
-            circle_indices = np.argsort(vals)[-2:]
+            # Lingkaran merah: 2 fitur yang paling BERBEDA dari rata-rata global
+            circle_indices = np.argsort(dev_vals)[-2:]
             for idx in circle_indices:
                 x, y = x_pos[idx], vals[idx]
                 ax_bar.add_patch(patches.Ellipse((x, y), width=1.5, height=y*0.8, edgecolor='red', facecolor='none', lw=2))
@@ -480,7 +513,7 @@ def main():
         top_25_idx_t = np.arange(20)
         top_feature_names_t = [feat_names_plot[i].replace('Green_', '') for i in top_25_idx_t]
 
-        tmc_sample_paths = get_dynamic_sample_paths(TMC_RAW_DIR, "TMC")
+        tmc_sample_paths = get_dynamic_sample_paths_tmc(TMC_RAW_DIR)
 
         colors = ['#2ca02c', '#bcbd22', '#ff7f0e', '#d62728']
 
@@ -503,8 +536,13 @@ def main():
             mes_mask_t = (tmc_labels == mes)
             if np.sum(mes_mask_t) > 0: mean_vals_t = np.mean(np.abs(tmc_features[mes_mask_t]), axis=0)
             else: mean_vals_t = np.zeros(actual_dim_tmc)
+            
+            # Hitung deviasi fitur MES ini terhadap rata-rata global
+            global_mean_tmc = np.mean(np.abs(tmc_features), axis=0)
+            deviation_t = np.abs(mean_vals_t - global_mean_tmc)
                 
             vals_t = mean_vals_t[top_25_idx_t]
+            dev_vals_t = deviation_t[top_25_idx_t]
             x_pos_t = np.arange(len(top_feature_names_t))
             
             ax_bar.bar(x_pos_t, vals_t, color='#1f77b4', edgecolor='white')
@@ -515,7 +553,8 @@ def main():
             ax_bar.set_yscale('log')
             ax_bar.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
             
-            circle_indices_t = np.argsort(vals_t)[-2:]
+            # Lingkaran merah: 2 fitur yang paling BERBEDA dari rata-rata global
+            circle_indices_t = np.argsort(dev_vals_t)[-2:]
             for idx in circle_indices_t:
                 x, y = x_pos_t[idx], vals_t[idx]
                 ax_bar.add_patch(patches.Ellipse((x, y), width=1.5, height=y*0.8, edgecolor='red', facecolor='none', lw=2))
