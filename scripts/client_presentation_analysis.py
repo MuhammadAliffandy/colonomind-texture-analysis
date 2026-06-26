@@ -172,6 +172,26 @@ def generate_threshold_table(features, labels, target_feats, dataset_name):
     print(f"✅ Disimpan Threshold Table {dataset_name} ke: {csv_path}")
     return df
 
+def get_dynamic_sample_paths(root_dir, dataset_type):
+    sample_dict = {}
+    needed = {0, 1, 2, 3}
+    for p in Path(root_dir).rglob("*.*"):
+        if not needed: break
+        if p.suffix.lower() in ['.bmp', '.jpg', '.jpeg', '.png']:
+            parent_name = p.parent.name
+            for mes in list(needed):
+                if dataset_type == "LIMUC" and (str(mes) in parent_name or f"Mayo {mes}" in parent_name):
+                    sample_dict[str(mes)] = str(p)
+                    needed.remove(mes)
+                    break
+                elif dataset_type == "TMC" and str(mes) in parent_name:
+                    sample_dict[str(mes)] = str(p)
+                    needed.remove(mes)
+                    break
+    for mes in needed:
+        sample_dict[str(mes)] = ""
+    return sample_dict
+
 def main():
     print("✅ Modul dan Direktori siap.")
     
@@ -341,12 +361,7 @@ def main():
         top_25_idx = np.argsort(variances)[-25:]
         top_feature_names = [feat_names_plot[i] for i in top_25_idx]
 
-        limuc_sample_paths = {
-            "0": f"{LIMUC_RAW_DIR}/patient_based_classified_images/1/Mayo 0/UC_patient_1_16.bmp",
-            "1": f"{LIMUC_RAW_DIR}/patient_based_classified_images/1/Mayo 1/UC_patient_1_11.bmp",
-            "2": f"{LIMUC_RAW_DIR}/patient_based_classified_images/1/Mayo 2/UC_patient_1_10.bmp",
-            "3": f"{LIMUC_RAW_DIR}/patient_based_classified_images/10/Mayo 3/UC_patient_10_27.bmp"
-        }
+        limuc_sample_paths = get_dynamic_sample_paths(LIMUC_RAW_DIR, "LIMUC")
 
         for mes in range(4):
             ax_img = fig.add_subplot(gs[mes, 0])
@@ -459,12 +474,7 @@ def main():
         top_25_idx_t = np.argsort(variances_tmc)[-25:]
         top_feature_names_t = [feat_names_plot[i] for i in top_25_idx_t]
 
-        tmc_sample_paths = {
-            "0": f"{TMC_RAW_DIR}/images/P02264.JPG",
-            "1": f"{TMC_RAW_DIR}/images/P04880.JPG",
-            "2": f"{TMC_RAW_DIR}/images/P07855.JPG",
-            "3": f"{TMC_RAW_DIR}/images/P10984.JPG"
-        }
+        tmc_sample_paths = get_dynamic_sample_paths(TMC_RAW_DIR, "TMC")
 
         colors = ['#2ca02c', '#bcbd22', '#ff7f0e', '#d62728']
 
