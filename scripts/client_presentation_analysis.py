@@ -418,13 +418,14 @@ def main():
             if np.sum(mes_mask) > 0: mean_vals = np.mean(np.abs(limuc_features[mes_mask]), axis=0)
             else: mean_vals = np.zeros(actual_dim)
             
-            # Hitung deviasi fitur MES ini terhadap rata-rata global
-            # untuk menemukan fitur yang paling UNIK/DISTINCTIVE per MES
+            # Hitung deviasi RELATIF (%) fitur MES ini terhadap rata-rata global
+            # Menggunakan persentase perubahan agar fitur berskala kecil yg berubah drastis
+            # bisa ter-highlight, bukan selalu fitur berskala besar
             global_mean_limuc = np.mean(np.abs(limuc_features), axis=0)
-            deviation = np.abs(mean_vals - global_mean_limuc)
+            relative_deviation = np.abs(mean_vals - global_mean_limuc) / (global_mean_limuc + 1e-10)
                 
             vals = mean_vals[top_25_idx]
-            dev_vals = deviation[top_25_idx]
+            dev_vals = relative_deviation[top_25_idx]
             x_pos = np.arange(len(top_feature_names))
             
             colors_bar = '#1f77b4'  # Warna biru solid sesuai standar paper
@@ -537,12 +538,12 @@ def main():
             if np.sum(mes_mask_t) > 0: mean_vals_t = np.mean(np.abs(tmc_features[mes_mask_t]), axis=0)
             else: mean_vals_t = np.zeros(actual_dim_tmc)
             
-            # Hitung deviasi fitur MES ini terhadap rata-rata global
+            # Hitung deviasi RELATIF (%) fitur MES ini terhadap rata-rata global
             global_mean_tmc = np.mean(np.abs(tmc_features), axis=0)
-            deviation_t = np.abs(mean_vals_t - global_mean_tmc)
+            relative_deviation_t = np.abs(mean_vals_t - global_mean_tmc) / (global_mean_tmc + 1e-10)
                 
             vals_t = mean_vals_t[top_25_idx_t]
-            dev_vals_t = deviation_t[top_25_idx_t]
+            dev_vals_t = relative_deviation_t[top_25_idx_t]
             x_pos_t = np.arange(len(top_feature_names_t))
             
             ax_bar.bar(x_pos_t, vals_t, color='#1f77b4', edgecolor='white')
