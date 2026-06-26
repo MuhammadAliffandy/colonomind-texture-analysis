@@ -366,7 +366,9 @@ def main():
         gs = GridSpec(4, 5, figure=fig, width_ratios=[1, 1.5, 1.5, 1.5, 1.5])
         colors = ['#2ca02c', '#bcbd22', '#ff7f0e', '#d62728']
 
-        variances = np.var(scaled_limuc, axis=0)
+        plot_scaler_limuc = MinMaxScaler(feature_range=(1, 100))
+        plot_limuc = plot_scaler_limuc.fit_transform(limuc_features)
+        variances = np.var(plot_limuc, axis=0)
         top_25_idx = np.argsort(variances)[-25:]
         top_feature_names = [feat_names_plot[i] for i in top_25_idx]
 
@@ -389,7 +391,7 @@ def main():
             ax_img.text(128, -20, f"MES {mes}", color='white', fontweight='bold', fontsize=16, ha='center', va='center')
 
             mes_mask = (limuc_labels == mes)
-            if np.sum(mes_mask) > 0: mean_vals = np.mean(scaled_limuc[mes_mask], axis=0)
+            if np.sum(mes_mask) > 0: mean_vals = np.mean(plot_limuc[mes_mask], axis=0)
             else: mean_vals = np.zeros(actual_dim)
                 
             vals = mean_vals[top_25_idx]
@@ -397,17 +399,15 @@ def main():
             
             colors_bar = '#1f77b4'  # Warna biru solid sesuai standar paper
             ax_bar.bar(x_pos, vals, color=colors_bar, edgecolor='white')
-            ax_bar.axhline(0, color='black', linewidth=1)
             ax_bar.set_xticks(x_pos)
             ax_bar.set_xticklabels(top_feature_names, rotation=45, ha='right', fontsize=9)
-            ax_bar.set_ylabel("Standardized Value (Z-Score)", fontsize=10)
+            ax_bar.set_ylabel("Relative Feature Strength (0-100)", fontsize=10)
             ax_bar.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
             
             circle_indices = np.argsort(np.abs(vals))[-2:]
             for idx in circle_indices:
                 x, y = x_pos[idx], vals[idx]
-                offset = 0.1 if y > 0 else -0.1
-                ax_bar.add_patch(patches.Ellipse((x, y + offset), width=1.5, height=np.abs(y)*0.4 + 0.1, edgecolor='red', facecolor='none', lw=2))
+                ax_bar.add_patch(patches.Ellipse((x, y + 2), width=1.5, height=y*0.15 + 2, edgecolor='red', facecolor='none', lw=2))
 
         plt.tight_layout()
         plt.savefig(os.path.join(FIG_DIR, "limuc_feature_importance.png"))
