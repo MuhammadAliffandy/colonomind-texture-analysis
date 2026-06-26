@@ -366,11 +366,9 @@ def main():
         gs = GridSpec(4, 5, figure=fig, width_ratios=[1, 1.5, 1.5, 1.5, 1.5])
         colors = ['#2ca02c', '#bcbd22', '#ff7f0e', '#d62728']
 
-        plot_scaler_limuc = MinMaxScaler(feature_range=(1, 100))
-        plot_limuc = plot_scaler_limuc.fit_transform(limuc_features)
-        variances = np.var(plot_limuc, axis=0)
-        top_25_idx = np.argsort(variances)[-25:]
-        top_feature_names = [feat_names_plot[i] for i in top_25_idx]
+        # Menggunakan 20 fitur pertama (DWT + beberapa GLCM) persis seperti contoh klien
+        top_25_idx = np.arange(20)
+        top_feature_names = [feat_names_plot[i].replace('Green_', '') for i in top_25_idx]
 
         limuc_sample_paths = get_dynamic_sample_paths(LIMUC_RAW_DIR, "LIMUC")
 
@@ -391,7 +389,7 @@ def main():
             ax_img.text(128, -20, f"MES {mes}", color='white', fontweight='bold', fontsize=16, ha='center', va='center')
 
             mes_mask = (limuc_labels == mes)
-            if np.sum(mes_mask) > 0: mean_vals = np.mean(plot_limuc[mes_mask], axis=0)
+            if np.sum(mes_mask) > 0: mean_vals = np.mean(np.abs(limuc_features[mes_mask]), axis=0)
             else: mean_vals = np.zeros(actual_dim)
                 
             vals = mean_vals[top_25_idx]
@@ -401,13 +399,14 @@ def main():
             ax_bar.bar(x_pos, vals, color=colors_bar, edgecolor='white')
             ax_bar.set_xticks(x_pos)
             ax_bar.set_xticklabels(top_feature_names, rotation=45, ha='right', fontsize=9)
-            ax_bar.set_ylabel("Relative Feature Strength (0-100)", fontsize=10)
+            ax_bar.set_ylabel("Raw feature value (log scale)", fontsize=10)
+            ax_bar.set_yscale('log')
             ax_bar.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
             
-            circle_indices = np.argsort(np.abs(vals))[-2:]
+            circle_indices = np.argsort(vals)[-2:]
             for idx in circle_indices:
                 x, y = x_pos[idx], vals[idx]
-                ax_bar.add_patch(patches.Ellipse((x, y + 2), width=1.5, height=y*0.15 + 2, edgecolor='red', facecolor='none', lw=2))
+                ax_bar.add_patch(patches.Ellipse((x, y), width=1.5, height=y*0.8, edgecolor='red', facecolor='none', lw=2))
 
         plt.tight_layout()
         plt.savefig(os.path.join(FIG_DIR, "limuc_feature_importance.png"))
@@ -477,11 +476,9 @@ def main():
         fig = plt.figure(figsize=(16, 16))
         gs = GridSpec(4, 5, figure=fig, width_ratios=[1, 1.5, 1.5, 1.5, 1.5])
         
-        plot_scaler_tmc = MinMaxScaler(feature_range=(1, 100))
-        plot_tmc = plot_scaler_tmc.fit_transform(tmc_features)
-        variances_tmc = np.var(plot_tmc, axis=0)
-        top_25_idx_t = np.argsort(variances_tmc)[-25:]
-        top_feature_names_t = [feat_names_plot[i] for i in top_25_idx_t]
+        # Menggunakan 20 fitur pertama persis seperti contoh klien
+        top_25_idx_t = np.arange(20)
+        top_feature_names_t = [feat_names_plot[i].replace('Green_', '') for i in top_25_idx_t]
 
         tmc_sample_paths = get_dynamic_sample_paths(TMC_RAW_DIR, "TMC")
 
@@ -504,7 +501,7 @@ def main():
             ax_img.text(128, -20, f"MES {mes}", color='white', fontweight='bold', fontsize=16, ha='center', va='center')
 
             mes_mask_t = (tmc_labels == mes)
-            if np.sum(mes_mask_t) > 0: mean_vals_t = np.mean(plot_tmc[mes_mask_t], axis=0)
+            if np.sum(mes_mask_t) > 0: mean_vals_t = np.mean(np.abs(tmc_features[mes_mask_t]), axis=0)
             else: mean_vals_t = np.zeros(actual_dim_tmc)
                 
             vals_t = mean_vals_t[top_25_idx_t]
@@ -514,13 +511,14 @@ def main():
             
             ax_bar.set_xticks(x_pos_t)
             ax_bar.set_xticklabels(top_feature_names_t, rotation=45, ha='right', fontsize=9)
-            ax_bar.set_ylabel("Relative Feature Strength (0-100)", fontsize=10)
+            ax_bar.set_ylabel("Raw feature value (log scale)", fontsize=10)
+            ax_bar.set_yscale('log')
             ax_bar.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
             
-            circle_indices_t = np.argsort(np.abs(vals_t))[-2:]
+            circle_indices_t = np.argsort(vals_t)[-2:]
             for idx in circle_indices_t:
                 x, y = x_pos_t[idx], vals_t[idx]
-                ax_bar.add_patch(patches.Ellipse((x, y + 2), width=1.5, height=y*0.15 + 2, edgecolor='red', facecolor='none', lw=2))
+                ax_bar.add_patch(patches.Ellipse((x, y), width=1.5, height=y*0.8, edgecolor='red', facecolor='none', lw=2))
 
         plt.tight_layout()
         plt.savefig(os.path.join(FIG_DIR, "tmc_feature_importance.png"))
